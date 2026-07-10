@@ -103,6 +103,14 @@ const fromB64 = (b: string) => {
 };
 const SYNC_PREFIX = "YTL1:";
 
+// 貼り付け経路で先頭にゼロ幅文字が紛れると trim() では落ちず、"YTL1:" の一致に失敗して
+// コロンが本体に残る。不可視文字を落としてからプレフィックスを剥がす（全角コロンも許容）。
+const stripSyncPrefix = (raw: string) =>
+  raw
+    .replace(/[​-‍⁠﻿]/g, "")
+    .trim()
+    .replace(/^YTL1\s*[:：]\s*/i, "");
+
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -216,8 +224,7 @@ export default function Home() {
 
   function importFavorites() {
     try {
-      const t = importText.trim().replace(/^YTL1:/, "");
-      const arr = JSON.parse(fromB64(t)) as Favorite[];
+      const arr = JSON.parse(fromB64(stripSyncPrefix(importText))) as Favorite[];
       if (!Array.isArray(arr)) throw new Error("not array");
       // 既存と統合（key重複は上書き、無いものだけ追加）
       const map = new Map(favorites.map((f) => [f.key, f]));
