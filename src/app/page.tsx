@@ -71,13 +71,35 @@ const toB64 = (s: string) =>
     .replace(/=+$/, "");
 
 const fromB64 = (b: string) => {
-  const t = b
-    .replace(/[\r\n\t]/g, "") // 折り返しで入った改行を除去
-    .replace(/ /g, "+") // base64に空白は無い = 化けた "+" とみなして復元（旧コード救済）
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
-  const padded = t + "=".repeat((4 - (t.length % 4)) % 4);
-  return decodeURIComponent(escape(atob(padded)));
+  // URL安全形式(-,_)か、旧形式(+,/)かを判別する。旧形式に -,_ は現れない。
+  const urlSafe = /[-_]/.test(b);
+  let t = b
+    // iOS/macOS のスマート表記変換は "--"→"–"(en dash)、"---"→"—"(em dash) と
+    // 文字数を詰めて置換する。戻すときも同じ数のハイフンに展開する。
+    .replace(/—/g, "---")
+    .replace(/–/g, "--")
+    // 単独で化けるハイフン類（U+2010 ハイフン, U+2212 マイナス, 全角）
+    .replace(/[‐−－]/g, "-")
+    .replace(/＿/g, "_")
+    // ゼロ幅スペース・BOM・ノーブレークスペースを除去
+    .replace(/[​‌‍﻿ ]/g, "")
+    .replace(/[\r\n\t]/g, ""); // 折り返しで入った改行を除去
+  // 旧形式では空白は化けた "+" とみなす。新形式に "+" は無いので単に捨てる。
+  t = urlSafe ? t.replace(/ /g, "") : t.replace(/ /g, "+");
+  t = t.replace(/-/g, "+").replace(/_/g, "/");
+
+  const bad = [...new Set(t.replace(/[A-Za-z0-9+/=]/g, ""))];
+  if (bad.length > 0) {
+    const shown = bad
+      .map((c) => `${c}(U+${c.codePointAt(0)!.toString(16).toUpperCase()})`)
+      .join(" ");
+    throw new Error(`コードに使えない文字が含まれています: ${shown}`);
+  }
+
+  const body = t.replace(/=+$/, "");
+  return decodeURIComponent(
+    escape(atob(body + "=".repeat((4 - (body.length % 4)) % 4))),
+  );
 };
 const SYNC_PREFIX = "YTL1:";
 
@@ -430,6 +452,11 @@ export default function Home() {
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 rows={3}
+                // iOSの自動修正・スマート表記変換がコードを壊すので全て切る
+                autoCapitalize="off"
+                autoCorrect="off"
+                autoComplete="off"
+                spellCheck={false}
                 placeholder="ここに別端末で書き出した同期コード（YTL1:…）を貼り付け"
                 className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-gray-500"
               />
