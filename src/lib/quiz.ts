@@ -81,10 +81,17 @@ const QUESTIONS_SCHEMA = {
       items: {
         type: Type.OBJECT,
         properties: {
-          question: { type: Type.STRING },
-          options: { type: Type.ARRAY, items: { type: Type.STRING } },
-          answerIndex: { type: Type.INTEGER },
-          explanation: { type: Type.STRING },
+          question: { type: Type.STRING, description: "設問（英語）" },
+          options: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "4つの選択肢（英語）",
+          },
+          answerIndex: { type: Type.INTEGER, description: "正解の選択肢インデックス(0-3)" },
+          explanation: {
+            type: Type.STRING,
+            description: "正解の理由の解説。必ず日本語で書くこと。英語で書いてはならない。",
+          },
         },
         required: ["question", "options", "answerIndex", "explanation"],
       },
@@ -108,6 +115,12 @@ Return ONLY the two numbers: start and end (in seconds). Do not write anything e
 const QUESTIONS_SYSTEM = `You are an English listening test author specializing in authentic TOEIC Listening (Part 3/4) questions.
 You are given the EXACT transcript of one ~50-second audio segment. Write EXACTLY 3 questions in the real TOEIC Part 3/4 style. Every question and every option MUST be answerable purely from THIS transcript — never use outside knowledge or invent facts not present in the text.
 
+OUTPUT LANGUAGE — HARD REQUIREMENT, READ THIS FIRST:
+- "question" and "options": write in ENGLISH.
+- "explanation": write in JAPANESE (日本語). The learner is a Japanese speaker and cannot read an English explanation.
+- This prompt and the transcript are in English, but that does NOT mean the explanation should be. An "explanation" written in English is a FAILED response, no matter how good the questions are.
+- Example of a correct "explanation": 「話し手は "you should always double-check" と述べており、確認の重要性を勧めているため B が正解。」
+
 TOEIC question style — IMPORTANT:
 - Test gist, purpose, inference, and sequence/cause — NOT trivia.
 - Prefer these question types:
@@ -127,7 +140,7 @@ TOEIC question style — IMPORTANT:
 
 Constraints:
 - Each question has EXACTLY 4 options (A-D) in English; exactly one correct; set answerIndex (0-3).
-- "explanation" in Japanese, briefly explaining why the answer is correct (you may quote the relevant English phrase).
+- "explanation" briefly explains why the answer is correct, IN JAPANESE (you may quote the relevant English phrase).
 - Base everything ONLY on the given transcript.`;
 
 export async function generateQuiz(cues: Cue[]): Promise<Quiz> {
