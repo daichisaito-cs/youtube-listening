@@ -62,8 +62,23 @@ interface Favorite {
 }
 
 // お気に入りの書き出し/読み込み用。UTF-8(日本語)を安全にbase64化する。
-const toB64 = (s: string) => btoa(unescape(encodeURIComponent(s)));
-const fromB64 = (b: string) => decodeURIComponent(escape(atob(b)));
+// 標準base64の "+" は URL/メール/チャットを経由すると空白に化けてコードが壊れるため、
+// URL安全な文字集合(-, _)で書き出し、パディングも落とす。
+const toB64 = (s: string) =>
+  btoa(unescape(encodeURIComponent(s)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+const fromB64 = (b: string) => {
+  const t = b
+    .replace(/[\r\n\t]/g, "") // 折り返しで入った改行を除去
+    .replace(/ /g, "+") // base64に空白は無い = 化けた "+" とみなして復元（旧コード救済）
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+  const padded = t + "=".repeat((4 - (t.length % 4)) % 4);
+  return decodeURIComponent(escape(atob(padded)));
+};
 const SYNC_PREFIX = "YTL1:";
 
 export default function Home() {
@@ -200,9 +215,10 @@ export default function Home() {
       );
       setImportText("");
       setShowImport(false);
-    } catch {
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
       setSyncMsg(
-        "コードを読み取れませんでした。コード全体（YTL1:…）を貼り付けているか確認してください。",
+        `コードを読み取れませんでした（${reason}）。コード全体（YTL1:…）が途中で切れていないか確認してください。`,
       );
     }
   }
