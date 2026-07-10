@@ -8,11 +8,11 @@ import {
   sliceSegment,
 } from "./transcript";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3-flash-preview";
 
-// Gemini 3.1 Flash-Lite の料金（USD / 100万トークン）。モデル変更時はここを合わせる。
-const PRICE_IN_PER_M = Number(process.env.PRICE_IN_PER_M) || 0.25; // 入力
-const PRICE_OUT_PER_M = Number(process.env.PRICE_OUT_PER_M) || 1.5; // 出力（思考トークン含む）
+// Gemini 3 Flash (preview) の料金（USD / 100万トークン）。モデル変更時はここを合わせる。
+const PRICE_IN_PER_M = Number(process.env.PRICE_IN_PER_M) || 0.5; // 入力
+const PRICE_OUT_PER_M = Number(process.env.PRICE_OUT_PER_M) || 3.0; // 出力（思考トークン含む）
 // USD→JPY 換算レート（環境変数で上書き可。既定は概算）
 const USDJPY = Number(process.env.USDJPY_RATE) || 155;
 
